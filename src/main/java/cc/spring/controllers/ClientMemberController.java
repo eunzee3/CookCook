@@ -20,8 +20,7 @@ import cc.spring.dto.MemberDTO;
 import cc.spring.dto.loginCountDTO;
 import cc.spring.services.AdminMemberService;
 import cc.spring.services.ClientMemberService;
-import cc.spring.services.SensUtilsService;
-import cc.spring.services.SmsService;
+import cc.spring.services.CoolsmsService;
 
 @Controller
 @RequestMapping("/clientMember/")
@@ -35,22 +34,24 @@ public class ClientMemberController {
 	@Autowired
 	private AdminMemberService ams;
 	
+	@Autowired
+	private CoolsmsService sms;
 	
-	//  ë¡œê·¸ì¸ ì°½ìœ¼ë¡œ ì´ë™
+	//  ·Î±×ÀÎ Ã¢À¸·Î ÀÌµ¿
 	@RequestMapping("login_form")
 	public String login_form() throws Exception {
 		return "member/clientLogin";
 	}
 
-	// í´ë¼ì´ì–¸íŠ¸ ë¡œê·¸ì¸
+	// Å¬¶óÀÌ¾ğÆ® ·Î±×ÀÎ
 	@RequestMapping("login")
 	public String login(MemberDTO dto, RedirectAttributes redir) throws Exception {
 		
 
-		// ì…ë ¥í•œ idì™€ ë¹„ë°€ë²ˆí˜¸ê°€ ê´€ë¦¬ìì¸ì§€ í™•ì¸
+		// ÀÔ·ÂÇÑ id¿Í ºñ¹Ğ¹øÈ£°¡ °ü¸®ÀÚÀÎÁö È®ÀÎ
 		boolean admin = ams.login(dto.getId(), dto.getPw());
 		if(admin) {
-			// ì…ë ¥í•œ idì™€ ë¹„ë°€ë²ˆí˜¸ ì¼ì¹˜í•˜ëŠ” ê´€ë¦¬ì ì •ë³´ ê°€ì ¸ì˜¤ê¸°
+			// ÀÔ·ÂÇÑ id¿Í ºñ¹Ğ¹øÈ£ ÀÏÄ¡ÇÏ´Â °ü¸®ÀÚ Á¤º¸ °¡Á®¿À±â
 			MemberDTO amd = ams.selectAdminMemberInfo(dto.getId(), dto.getPw());
 			session.setAttribute("code", amd.getCode());
 			session.setAttribute("id", amd.getId());
@@ -65,15 +66,15 @@ public class ClientMemberController {
 		String pw = EncryptionUtils.sha512(dto.getPw());
 		dto.setPw(pw);
 		
-		// ì…ë ¥í•œ idì™€ ë¹„ë°€ë²ˆí˜¸ê°€ ì¼ì¹˜í•˜ëŠ” íšŒì›ì´ ìˆìœ¼ë©´ ì•„ë˜ êµ¬ë¬¸ ì‹¤í–‰
+		// ÀÔ·ÂÇÑ id¿Í ºñ¹Ğ¹øÈ£°¡ ÀÏÄ¡ÇÏ´Â È¸¿øÀÌ ÀÖÀ¸¸é ¾Æ·¡ ±¸¹® ½ÇÇà
 		boolean memberCount = cms.existingMember(dto);
 		
 		if(memberCount) {
-			// ë¡œê·¸ì¸ì‹œ count update
+			// ·Î±×ÀÎ½Ã count update
 			loginCountDTO ldto = new loginCountDTO(cms.selectClientMemberInfo(dto.getId()).getCode(), 0, null);
 			boolean result = cms.login(ldto,dto);
 			if(result) {
-				// ì…ë ¥í•œ idì™€ ì¼ì¹˜í•˜ëŠ” íšŒì›ì˜ ì •ë³´ dtoë¡œ ê°€ì ¸ì˜¤ê¸°
+				// ÀÔ·ÂÇÑ id¿Í ÀÏÄ¡ÇÏ´Â È¸¿øÀÇ Á¤º¸ dto·Î °¡Á®¿À±â
 				MemberDTO cmd = cms.selectClientMemberInfo(dto.getId());
 				session.setAttribute("code", cmd.getCode());
 				session.setAttribute("id",cmd.getId());
@@ -85,26 +86,26 @@ public class ClientMemberController {
 		redir.addFlashAttribute("status", "false");
 		return "redirect:/clientMember/login_form";
 	}
-//	ë¹„ë°€ë²ˆí˜¸ ì°¾ê¸°í• ë•Œ í°ë²ˆí˜¸ë¡œ ì•„ì´ë””ê°’ ë°›ì•„ì˜¤ëŠ” ì½”ë“œ
+//	ºñ¹Ğ¹øÈ£ Ã£±âÇÒ¶§ Æù¹øÈ£·Î ¾ÆÀÌµğ°ª ¹Ş¾Æ¿À´Â ÄÚµå
 	@RequestMapping("getIdByPhone")
 	public String getIdByPhone(String phone) {
 		String result = cms.getIdByPhone(phone);
 		return null;
 	}
 	
-	// ë¡œê·¸ì•„ì›ƒ
+	// ·Î±×¾Æ¿ô
 	@RequestMapping("logout")
 	public String logout() {
 		session.invalidate();
 		return "redirect:/";
 	}
-	// í´ë¼ì´ì–¸íŠ¸ íšŒì›ê°€ì… ì°½ìœ¼ë¡œ ì´ë™
+	// Å¬¶óÀÌ¾ğÆ® È¸¿ø°¡ÀÔ Ã¢À¸·Î ÀÌµ¿
 	@RequestMapping("sign_form")
 	public String sign_form() throws Exception {
 		return "member/clientSign";
 	}
 	
-	// íšŒì›ê°€ì… ì‹œ ì¤‘ë³µì²´í¬
+	// È¸¿ø°¡ÀÔ ½Ã Áßº¹Ã¼Å©
 	@ResponseBody
 	@RequestMapping(value="checkSum", produces="text/html;charset=utf8")
 	public String checkId(String key, String value) throws Exception {
@@ -118,53 +119,38 @@ public class ClientMemberController {
 		}
 	}
 	
-	// íšŒì›ê°€ì… ì‹œ ì¸ì¦ë²ˆí˜¸ ëœë¤ ë°œì†¡
+	// È¸¿ø°¡ÀÔ ½Ã ÀÎÁõ¹øÈ£ ·£´ı ¹ß¼Û
 	@ResponseBody
 	@RequestMapping(value="sendSmsSign", produces="text/html;charset=utf8")
 	public String sendSms(String phone) throws Exception {
-		// ì´ë¯¸ ê°€ì…í•œ ì—°ë½ì²˜ê°€ ìˆëŠ”ì§€ í™•ì¸
+		// ÀÌ¹Ì °¡ÀÔÇÑ ¿¬¶ôÃ³°¡ ÀÖ´ÂÁö È®ÀÎ
 		boolean result = cms.phoneCheck(phone);
 		
-		// ê°™ì€ ì—°ë½ì²˜ê°€ DBì— ì—†ìœ¼ë©´ ì‹¤í–‰
+		// °°Àº ¿¬¶ôÃ³°¡ DB¿¡ ¾øÀ¸¸é ½ÇÇà
 		if(!result) {
-			Random rand = new Random(); 
-			String numStr = "";
-			for(int i=0; i<5; i++) {
-				String ran = Integer.toString(rand.nextInt(10));
-				numStr+=ran;
-			}
-			SensUtilsService.send_msg(phone, numStr);
-			session.setAttribute("numStr", numStr);	
-		
+			session.setAttribute("numStr", CoolsmsService.sendCode(phone));
 		}
+			
 		return String.valueOf(result);
 	}
 	
-	// ê³„ì •ì°¾ê¸°ì‹œ ì¸ì¦ë²ˆí˜¸ ëœë¤ ë°œì†¡
+
+	// °èÁ¤Ã£±â½Ã ÀÎÁõ¹øÈ£ ·£´ı ¹ß¼Û
 	@ResponseBody
 	@RequestMapping(value="sendSmsLogin", produces="text/html;charset=utf8")
 	public String sendSms2(String phone) throws Exception {
-		// ì´ë¯¸ ê°€ì…í•œ ì—°ë½ì²˜ê°€ ìˆëŠ”ì§€ í™•ì¸
+		// ÀÌ¹Ì °¡ÀÔÇÑ ¿¬¶ôÃ³°¡ ÀÖ´ÂÁö È®ÀÎ
 		boolean result = cms.phoneCheck(phone);
 		
-		// ê°™ì€ ì—°ë½ì²˜ê°€ DBì— ì—†ìœ¼ë©´ ì‹¤í–‰
+		// °°Àº ¿¬¶ôÃ³°¡ DB¿¡ ÀÖÀ¸¸é ½ÇÇà
 		if(result) {
-			Random rand = new Random(); 
-			String numStr = "";
-			for(int i=0; i<5; i++) {
-				String ran = Integer.toString(rand.nextInt(10));
-				numStr+=ran;
-			}
-			SensUtilsService.send_msg(phone, numStr);
-			session.setAttribute("numStr", numStr);	
+			session.setAttribute("numStr", CoolsmsService.sendCode(phone));
 			session.setAttribute("phone", phone);
-			
 		}
-
 		return String.valueOf(result);
 	}
 	
-	// ì¸ì¦ë²ˆí˜¸ ì…ë ¥ í›„ ì¸ì¦ ë²„íŠ¼ í´ë¦­ ì‹œ
+	// ÀÎÁõ¹øÈ£ ÀÔ·Â ÈÄ ÀÎÁõ ¹öÆ° Å¬¸¯ ½Ã
 	@ResponseBody
 	@RequestMapping(value="certificationSign", produces="text/html;charset=utf8")
 	public String certification(String code) {
@@ -176,9 +162,9 @@ public class ClientMemberController {
 
 		else {
 			return String.valueOf(false);
-		}	
+		}	 
 	}
-	// ì¸ì¦ë²ˆí˜¸ ì…ë ¥ í›„ ì¸ì¦ ë²„íŠ¼ í´ë¦­ ì‹œ
+	// ÀÎÁõ¹øÈ£ ÀÔ·Â ÈÄ ÀÎÁõ ¹öÆ° Å¬¸¯ ½Ã
 	@ResponseBody
 	@RequestMapping("certificationLogin")
 	public Map<String, Object> certification2(String code) {
@@ -199,7 +185,7 @@ public class ClientMemberController {
 		return result;
 	}
 	
-	// ë¹„ë°€ë²ˆí˜¸ ì¬ì„¤ì •
+	// ºñ¹Ğ¹øÈ£ Àç¼³Á¤
 	@ResponseBody
 	@RequestMapping("changePw")
 	public void changePw(MemberDTO dto) throws Exception {
@@ -208,23 +194,23 @@ public class ClientMemberController {
 		cms.updatePw(dto);
 	}
 	
-	// ì¸ì¦ë²ˆí˜¸ ì‹œê°„ì´ˆê³¼ ì‹œ ì„¸ì…˜ì— ì €ì¥ëœ ì¸ì¦ë²ˆí˜¸ ì‚­ì œ
+	// ÀÎÁõ¹øÈ£ ½Ã°£ÃÊ°ú ½Ã ¼¼¼Ç¿¡ ÀúÀåµÈ ÀÎÁõ¹øÈ£ »èÁ¦
 	@ResponseBody
 	@RequestMapping(value="removeSession")
 	public void removeSession() {
 		session.removeAttribute("numStr");
 	}
 	
-	// íšŒì›ê°€ì… í¼ì—ì„œ ì…ë ¥í•œ ê°’ë“¤ ë„˜ì–´ì˜´
+	// È¸¿ø°¡ÀÔ Æû¿¡¼­ ÀÔ·ÂÇÑ °ªµé ³Ñ¾î¿È
 	@RequestMapping("signup")
 	public String signup(MemberDTO dto, String member_birth_year, String member_birth_month, String member_birth_day, Model m) throws Exception{
-		// ë°›ì€ ìƒë…„ì›”ì¼ í•©ì¹˜ê¸°
+		// ¹ŞÀº »ı³â¿ùÀÏ ÇÕÄ¡±â
 		String birthDate = member_birth_year + member_birth_month + member_birth_day;
 		dto.setBirthDate(birthDate);
-		// ë¹„ë°€ë²ˆí˜¸ ì•”í˜¸í™”
+		// ºñ¹Ğ¹øÈ£ ¾ÏÈ£È­
 		String shaPw = EncryptionUtils.sha512(dto.getPw());
 		dto.setPw(shaPw);
-		// ì¼ë°˜íšŒì› ê°€ì… ì‹œ authgradecode 1003 ì‚½ì…
+		// ÀÏ¹İÈ¸¿ø °¡ÀÔ ½Ã authgradecode 1003 »ğÀÔ
 		dto.setAuthGradeCode(1003);
 		
 		int result = 0;
@@ -239,13 +225,13 @@ public class ClientMemberController {
 		}
 	}
 	
-	// ë‚´ ì •ë³´ ë³´ê¸° í´ë¦­ ì‹œ í˜ì´ì§€ ì´ë™
+	// ³» Á¤º¸ º¸±â Å¬¸¯ ½Ã ÆäÀÌÁö ÀÌµ¿
 	@RequestMapping("clientMyInfo")
 	public String myInfo() throws Exception {
 		return "/member/clientMyInfo";
 	}
 	
-	// ë¹„ë°€ë²ˆí˜¸ ì…ë ¥ ì‹œ ë¡œê·¸ì¸í•œ íšŒì›ì˜ ë¹„ë°€ë²ˆí˜¸ì™€ ì¼ì¹˜í•˜ëŠ”ì§€ í™•ì¸
+	// ºñ¹Ğ¹øÈ£ ÀÔ·Â ½Ã ·Î±×ÀÎÇÑ È¸¿øÀÇ ºñ¹Ğ¹øÈ£¿Í ÀÏÄ¡ÇÏ´ÂÁö È®ÀÎ
 	@ResponseBody
 	@RequestMapping("checkPw")
 	public String checkPw(String pw) throws Exception {
@@ -255,7 +241,7 @@ public class ClientMemberController {
 		return String.valueOf(result);
 	}
 	
-	// íšŒì›ì •ë³´ ê°€ì ¸ì˜¤ê¸°
+	// È¸¿øÁ¤º¸ °¡Á®¿À±â
 	@ResponseBody
 	@RequestMapping("selectClientMemberInfo")
 	public MemberDTO selectClientMemberInfo(String id) throws Exception {
@@ -263,44 +249,38 @@ public class ClientMemberController {
 		return dto;
 	}
 	
-	// íšŒì›ì •ë³´ ìˆ˜ì •ì´ ê°€ëŠ¥í•œ í¼ìœ¼ë¡œ ì´ë™
+	// È¸¿øÁ¤º¸ ¼öÁ¤ÀÌ °¡´ÉÇÑ ÆûÀ¸·Î ÀÌµ¿
 	@RequestMapping("goUpdateInfo")
 	public String goUpdateInfo(String id, Model m) throws Exception {
 		MemberDTO dto = cms.selectClientMemberInfo(id);
 		m.addAttribute("info", dto);
 		return "/member/clientInfoUpdate";
 	}
-	// íšŒì›ì •ë³´ ìˆ˜ì • ì‹œ ëª¨ë“  ë³€ê²½ì€ ì—°ë½ì²˜ ì¸ì¦ì„ í†µí•´ì„œë§Œ ê°€ëŠ¥í•´....
-	// ì´ ë¶€ë¶„ì€ ë¡œê·¸ì¸ëœ íšŒì›ì˜ ì—°ë½ì²˜ì™€ ë¹„íšŒì›ì˜ ì—°ë½ì²˜ë§Œ ë„˜ì–´ì˜´
+	// È¸¿øÁ¤º¸ ¼öÁ¤ ½Ã ¸ğµç º¯°æÀº ¿¬¶ôÃ³ ÀÎÁõÀ» ÅëÇØ¼­¸¸ °¡´ÉÇØ....
+	// ÀÌ ºÎºĞÀº ·Î±×ÀÎµÈ È¸¿øÀÇ ¿¬¶ôÃ³¿Í ºñÈ¸¿øÀÇ ¿¬¶ôÃ³¸¸ ³Ñ¾î¿È
 	@ResponseBody
 	@RequestMapping("sendSmsUpdate")
 	public String sendSmsUpdate(String phone) throws Exception {
 				
-			Random rand = new Random(); 
-			String numStr = "";
-			for(int i=0; i<5; i++) {
-				String ran = Integer.toString(rand.nextInt(10));
-				numStr+=ran;
-			}
-			SensUtilsService.send_msg(phone, numStr);
-			session.setAttribute("numStr", numStr);	
+		session.setAttribute("numStr", CoolsmsService.sendCode(phone));
+			
 		return String.valueOf(true);
 	}
 	
-	// íšŒì›ì •ë³´(ì—…ë°ì´íŠ¸) ì…ë ¥í•œ ë‚´ìš© ë„˜ì–´ì˜¤ëŠ” ê³³ 
+	// È¸¿øÁ¤º¸(¾÷µ¥ÀÌÆ®) ÀÔ·ÂÇÑ ³»¿ë ³Ñ¾î¿À´Â °÷ 
 	@RequestMapping("updateMemberInfo")
 	public String updateMemberInfo(MemberDTO dto, String member_birth_year, String member_birth_month, String member_birth_day, Model m) throws Exception {
-		// ë°›ì€ ìƒë…„ì›”ì¼ í•©ì¹˜ê¸°
+		// ¹ŞÀº »ı³â¿ùÀÏ ÇÕÄ¡±â
 		String birthDate = member_birth_year + member_birth_month + member_birth_day;
 		dto.setBirthDate(birthDate);
-		// íšŒì› ìˆ˜ì • ì‹œ where = idì—ì„œ idê°’ì´ í•„ìš”í•¨
+		// È¸¿ø ¼öÁ¤ ½Ã where = id¿¡¼­ id°ªÀÌ ÇÊ¿äÇÔ
 		String id = (String) session.getAttribute("id");
 		dto.setId(id);
 		
 		int result = cms.updateMemberInfo(dto);
 		if(result == 1) {
 			MemberDTO updateDto = cms.selectClientMemberInfo(id);
-			// ì—…ë°ì´íŠ¸ëœ ì •ë³´ ë‹¤ì‹œ ì„¸ì…˜ì— ë‹´ê¸°
+			// ¾÷µ¥ÀÌÆ®µÈ Á¤º¸ ´Ù½Ã ¼¼¼Ç¿¡ ´ã±â
 			session.setAttribute("code", updateDto.getCode());
 			session.setAttribute("id", updateDto.getId());
 			session.setAttribute("nickname", updateDto.getNickName());
@@ -315,7 +295,7 @@ public class ClientMemberController {
 		}
 	}
 	
-	// íšŒì›íƒˆí‡´í•˜ê¸°
+	// È¸¿øÅ»ÅğÇÏ±â
 	@ResponseBody
 	@RequestMapping("deleteMember")
 	public String deleteMember() throws Exception {

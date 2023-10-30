@@ -18,9 +18,7 @@ import cc.spring.commons.EncryptionUtils;
 import cc.spring.dto.MemberDTO;
 import cc.spring.dto.loginCountDTO;
 import cc.spring.services.BusinessMemberService;
-import cc.spring.services.SensUtilsService;
-import cc.spring.services.ShopService;
-import cc.spring.services.SmsService;
+import cc.spring.services.CoolsmsService;
 
 @Controller
 @RequestMapping("/businessMember/")
@@ -31,29 +29,29 @@ public class BusinessMemberController {
 	@Autowired
 	private BusinessMemberService bms;
 
-	// 로그인 창으로 이동
+	// 濡쒓렇�씤 李쎌쑝濡� �씠�룞
 	@RequestMapping("login_form")
 	public String login_form() throws Exception {
 		return "member/clientLogin";
 	}
 
-	// 사업자 로그인
+	// �궗�뾽�옄 濡쒓렇�씤
 	@RequestMapping("login")
 	public String login(MemberDTO dto, RedirectAttributes redir) throws Exception {
 
 		String loginPw = EncryptionUtils.sha512(dto.getPw());
 		dto.setPw(loginPw);
 
-		// 입력한 id와 비밀번호가 일치하는 회원이 있으면 아래 구문 실행
+		// �엯�젰�븳 id�� 鍮꾨�踰덊샇媛� �씪移섑븯�뒗 �쉶�썝�씠 �엳�쑝硫� �븘�옒 援щЦ �떎�뻾
 		boolean memberCount = bms.existingMember(dto);
 
 		if (memberCount) {
-			// 로그인 시 count update
+			// 濡쒓렇�씤 �떆 count update
 			loginCountDTO ldto = new loginCountDTO(bms.selectBusinessMemberInfo(dto.getBusinessId()).getCode(), 0,
 					null);
 			boolean result = bms.login(ldto, dto);
 			if (result) {
-				// 입력한 id와 일치하는 회원의 정보 dto로 가져오기
+				// �엯�젰�븳 id�� �씪移섑븯�뒗 �쉶�썝�쓽 �젙蹂� dto濡� 媛��졇�삤湲�
 				MemberDTO bmd = bms.selectBusinessMemberInfo(dto.getBusinessId());
 
 				session.setAttribute("code", bmd.getCode());
@@ -67,38 +65,30 @@ public class BusinessMemberController {
 		return "redirect:/businessMember/login_form";
 	}
 
-//		비밀번호 찾기할때 폰번호로 아이디값 받아오는 코드
+//		鍮꾨�踰덊샇 李얘린�븷�븣 �룿踰덊샇濡� �븘�씠�뵒媛� 諛쏆븘�삤�뒗 肄붾뱶
 	@RequestMapping("getIdByPhone")
 	public String getIdByPhone(String phone) {
 		String result = bms.getIdByPhone(phone);
 		return null;
 	}
 
-	// 계정찾기시 인증번호 랜덤 발송
+	// 怨꾩젙李얘린�떆 �씤利앸쾲�샇 �옖�뜡 諛쒖넚
 	@ResponseBody
 	@RequestMapping(value = "sendSmsLogin", produces = "text/html;charset=utf8")
 	public String sendSms2(String phone) throws Exception {
-		// 이미 가입한 연락처가 있는지 확인
+		// �씠誘� 媛��엯�븳 �뿰�씫泥섍� �엳�뒗吏� �솗�씤
 		boolean result = bms.phoneCheck(phone);
 
-		// 같은 연락처가 DB에 없으면 실행
+		// 媛숈� �뿰�씫泥섍� DB�뿉 �뾾�쑝硫� �떎�뻾
 		if (result) {
-			Random rand = new Random();
-			String numStr = "";
-			for (int i = 0; i < 5; i++) {
-				String ran = Integer.toString(rand.nextInt(10));
-				numStr += ran;
-			}
-			SensUtilsService.send_msg(phone, numStr);
-			session.setAttribute("numStr", numStr);
+			session.setAttribute("numStr", CoolsmsService.sendCode(phone));
 			session.setAttribute("phone", phone);
-
 		}
 
 		return String.valueOf(result);
 	}
 
-	// 인증번호 입력 후 인증 버튼 클릭 시
+	// �씤利앸쾲�샇 �엯�젰 �썑 �씤利� 踰꾪듉 �겢由� �떆
 	@ResponseBody
 	@RequestMapping("certificationLogin")
 	public Map<String, Object> certification2(String code) {
@@ -119,7 +109,7 @@ public class BusinessMemberController {
 		return result;
 	}
 
-	// 비밀번호 재설정
+	// 鍮꾨�踰덊샇 �옱�꽕�젙
 	@ResponseBody
 	@RequestMapping("changePw")
 	public void changePw(MemberDTO dto) throws Exception {
@@ -128,24 +118,24 @@ public class BusinessMemberController {
 		bms.updatePwBusiness(dto);
 	}
 
-	// 로그아웃
+	// 濡쒓렇�븘�썐
 	@RequestMapping("logout")
 	public String logout() {
 		session.invalidate();
 		return "redirect:/";
 	}
 
-	// 비즈니스 회원가입 창으로 이동
+	// 鍮꾩쫰�땲�뒪 �쉶�썝媛��엯 李쎌쑝濡� �씠�룞
 	@RequestMapping("sign_form")
 	public String sign_form() throws Exception {
 		return "member/businessSign";
 	}
 
-	// 회원가입 시 중복체크
+	// �쉶�썝媛��엯 �떆 以묐났泥댄겕
 	@ResponseBody
 	@RequestMapping(value = "checkSum", produces = "text/html;charset=utf8")
 	public String checkId(String key, String value) throws Exception {
-		// 같은 연락처와 이메일로 클라이언트와 비즈니스 회원가입 한 번씩 가능
+		// 媛숈� �뿰�씫泥섏� �씠硫붿씪濡� �겢�씪�씠�뼵�듃�� 鍮꾩쫰�땲�뒪 �쉶�썝媛��엯 �븳 踰덉뵫 媛��뒫
 		if (key.equals("PHONE") || key.equals("EMAIL")) {
 			boolean result = bms.phoneAndemailDuplication(key, value);
 			return String.valueOf(result);
@@ -155,29 +145,21 @@ public class BusinessMemberController {
 		return String.valueOf(result);
 	}
 
-	// 회원가입 시 인증번호 랜덤 발송
+	// �쉶�썝媛��엯 �떆 �씤利앸쾲�샇 �옖�뜡 諛쒖넚
 	@ResponseBody
 	@RequestMapping(value = "sendSmsSign", produces = "text/html;charset=utf8")
 	public String sendSms(String phone) throws Exception {
-		// 이미 가입한 연락처가 있는지 확인
+		// �씠誘� 媛��엯�븳 �뿰�씫泥섍� �엳�뒗吏� �솗�씤
 		boolean result = bms.phoneCheck(phone);
 
-		// 같은 연락처가 DB에 없으면 실행
+		// 媛숈� �뿰�씫泥섍� DB�뿉 �뾾�쑝硫� �떎�뻾
 		if (!result) {
-			Random rand = new Random();
-			String numStr = "";
-			for (int i = 0; i < 5; i++) {
-				String ran = Integer.toString(rand.nextInt(10));
-				numStr += ran;
-			}
-			SensUtilsService.send_msg(phone, numStr);
-			session.setAttribute("numStr", numStr);
-
+			session.setAttribute("numStr", CoolsmsService.sendCode(phone));
 		}
 		return String.valueOf(result);
 	}
 
-	// 인증번호 입력 후 인증 버튼 클릭 시
+	// �씤利앸쾲�샇 �엯�젰 �썑 �씤利� 踰꾪듉 �겢由� �떆
 	@ResponseBody
 	@RequestMapping(value = "certificationSign", produces = "text/html;charset=utf8")
 	public String certification(String code) throws Exception {
@@ -192,24 +174,24 @@ public class BusinessMemberController {
 		}
 	}
 
-	// 인증번호 시간초과 시 세션에 저장된 인증번호 삭제
+	// �씤利앸쾲�샇 �떆媛꾩큹怨� �떆 �꽭�뀡�뿉 ���옣�맂 �씤利앸쾲�샇 �궘�젣
 	@ResponseBody
 	@RequestMapping(value = "removeSession")
 	public void removeSession() throws Exception {
 		session.removeAttribute("numStr");
 	}
 
-	// 회원가입 폼에서 입력한 값들 넘어옴
+	// �쉶�썝媛��엯 �뤌�뿉�꽌 �엯�젰�븳 媛믩뱾 �꽆�뼱�샂
 	@RequestMapping("signup")
 	public String signup(MemberDTO dto, String member_birth_year, String member_birth_month, String member_birth_day,
 			Model m) throws Exception {
-		// 받은 생년월일 합치기
+		// 諛쏆� �깮�뀈�썡�씪 �빀移섍린
 		String birthDate = member_birth_year + member_birth_month + member_birth_day;
 		dto.setBirthDate(birthDate);
-		// 비밀번호 암호화
+		// 鍮꾨�踰덊샇 �븫�샇�솕
 		String shaPw = EncryptionUtils.sha512(dto.getPw());
 		dto.setPw(shaPw);
-		// 판매자회원 가입 시 authgradecode 1002 삽입
+		// �뙋留ㅼ옄�쉶�썝 媛��엯 �떆 authgradecode 1002 �궫�엯
 		dto.setAuthGradeCode(1002);
 
 		int result = 0;
@@ -224,13 +206,13 @@ public class BusinessMemberController {
 
 	}
 
-	// 내 정보 보기 클릭 시 페이지 이동
+	// �궡 �젙蹂� 蹂닿린 �겢由� �떆 �럹�씠吏� �씠�룞
 	@RequestMapping("businessMyInfo")
 	public String myInfo() throws Exception {
 		return "/member/businessMyInfo";
 	}
 
-	// 비밀번호 입력 시 로그인한 회원의 비밀번호와 일치하는지 확인
+	// 鍮꾨�踰덊샇 �엯�젰 �떆 濡쒓렇�씤�븳 �쉶�썝�쓽 鍮꾨�踰덊샇�� �씪移섑븯�뒗吏� �솗�씤
 	@ResponseBody
 	@RequestMapping("checkPw")
 	public String checkPw(String pw) throws Exception {
@@ -240,7 +222,7 @@ public class BusinessMemberController {
 		return String.valueOf(result);
 	}
 
-	// 회원정보 가져오기
+	// �쉶�썝�젙蹂� 媛��졇�삤湲�
 	@ResponseBody
 	@RequestMapping("selectBusinessMemberInfo")
 	public MemberDTO selectClientMemberInfo(String id) throws Exception {
@@ -248,7 +230,7 @@ public class BusinessMemberController {
 		return dto;
 	}
 
-	// 회원정보 수정이 가능한 폼으로 이동
+	// �쉶�썝�젙蹂� �닔�젙�씠 媛��뒫�븳 �뤌�쑝濡� �씠�룞
 	@RequestMapping("goUpdateInfo")
 	public String goUpdateInfo(String id, Model m) throws Exception {
 		MemberDTO dto = bms.selectBusinessMemberInfo(id);
@@ -256,38 +238,32 @@ public class BusinessMemberController {
 		return "/member/businessInfoUpdate";
 	}
 
-	// 회원정보 수정 시 모든 변경은 연락처 인증을 통해서만 가능해....
-	// 이 부분은 로그인된 회원의 연락처와 비회원의 연락처만 넘어옴
+	// �쉶�썝�젙蹂� �닔�젙 �떆 紐⑤뱺 蹂�寃쎌� �뿰�씫泥� �씤利앹쓣 �넻�빐�꽌留� 媛��뒫�빐....
+	// �씠 遺�遺꾩� 濡쒓렇�씤�맂 �쉶�썝�쓽 �뿰�씫泥섏� 鍮꾪쉶�썝�쓽 �뿰�씫泥섎쭔 �꽆�뼱�샂
 	@ResponseBody
 	@RequestMapping("sendSmsUpdate")
 	public String sendSmsUpdate(String phone) throws Exception {
 
-		Random rand = new Random();
-		String numStr = "";
-		for (int i = 0; i < 5; i++) {
-			String ran = Integer.toString(rand.nextInt(10));
-			numStr += ran;
-		}
-		SensUtilsService.send_msg(phone, numStr);
-		session.setAttribute("numStr", numStr);
+		session.setAttribute("numStr", CoolsmsService.sendCode(phone));
+		
 		return String.valueOf(true);
 	}
 
-	// 회원정보(업데이트) 입력한 내용 넘어오는 곳
+	// �쉶�썝�젙蹂�(�뾽�뜲�씠�듃) �엯�젰�븳 �궡�슜 �꽆�뼱�삤�뒗 怨�
 	@RequestMapping("updateMemberInfo")
 	public String updateMemberInfo(MemberDTO dto, String member_birth_year, String member_birth_month,
 			String member_birth_day, Model m) throws Exception {
-		// 받은 생년월일 합치기
+		// 諛쏆� �깮�뀈�썡�씪 �빀移섍린
 		String birthDate = member_birth_year + member_birth_month + member_birth_day;
 		dto.setBirthDate(birthDate);
-		// 회원 수정 시 where = id에서 id값이 필요함
+		// �쉶�썝 �닔�젙 �떆 where = id�뿉�꽌 id媛믪씠 �븘�슂�븿
 		String id = (String) session.getAttribute("id");
 		dto.setBusinessId(id);
 
 		int result = bms.updateMemberInfo(dto);
 		if (result == 1) {
 			MemberDTO updateDto = bms.selectBusinessMemberInfo(id);
-			// 업데이트된 정보 다시 세션에 담기
+			// �뾽�뜲�씠�듃�맂 �젙蹂� �떎�떆 �꽭�뀡�뿉 �떞湲�
 			session.setAttribute("code", updateDto.getCode());
 			session.setAttribute("id", updateDto.getBusinessId());
 			session.setAttribute("companyName", updateDto.getCompanyName());
@@ -300,13 +276,13 @@ public class BusinessMemberController {
 		}
 	}
 
-	// 회원탈퇴하기
+	// �쉶�썝�깉�눜�븯湲�
 	@ResponseBody
 	@RequestMapping("deleteMember")
 	public boolean deleteMember() throws Exception {
 		int code = (int) session.getAttribute("code");
 
-		// 판매자가 등록한 공구가 있으면 계정 삭제를 막을거에요.
+		// �뙋留ㅼ옄媛� �벑濡앺븳 怨듦뎄媛� �엳�쑝硫� 怨꾩젙 �궘�젣瑜� 留됱쓣嫄곗뿉�슂.
 		boolean result1 = bms.checkGroupBuying(code);
 		if (result1) {
 			return true;
